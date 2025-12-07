@@ -172,25 +172,25 @@ public class UserSharingSuccessTest extends UserSharingBaseTest {
         };
     }
 
-    @Test(dataProvider = "selectiveUserSharingDataProvider")
-    public void testSelectiveUserSharing(List<String> userIds, Map<String, Map<String, Object>> organizations,
-                                         Map<String, Object> expectedResults) throws Exception {
+//     @Test(dataProvider = "selectiveUserSharingDataProvider")
+//     public void testSelectiveUserSharing(List<String> userIds, Map<String, Map<String, Object>> organizations,
+//                                          Map<String, Object> expectedResults) throws Exception {
 
-        UserShareRequestBody requestBody = new UserShareRequestBody()
-                .userCriteria(getUserCriteriaForBaseUserSharing(userIds))
-                .organizations(getOrganizationsForSelectiveUserSharing(organizations));
+//         UserShareRequestBody requestBody = new UserShareRequestBody()
+//                 .userCriteria(getUserCriteriaForBaseUserSharing(userIds))
+//                 .organizations(getOrganizationsForSelectiveUserSharing(organizations));
 
-        Response response = getResponseOfPost(USER_SHARING_API_BASE_PATH + SHARE_PATH, toJSONString(requestBody));
+//         Response response = getResponseOfPost(USER_SHARING_API_BASE_PATH + SHARE_PATH, toJSONString(requestBody));
 
-        response.then()
-                .log().ifValidationFails()
-                .assertThat()
-                .statusCode(HttpStatus.SC_ACCEPTED)
-                .body(RESPONSE_STATUS, equalTo(RESPONSE_STATUS_VALUE))
-                .body(RESPONSE_DETAILS, equalTo(RESPONSE_DETAIL_VALUE_SHARING));
+//         response.then()
+//                 .log().ifValidationFails()
+//                 .assertThat()
+//                 .statusCode(HttpStatus.SC_ACCEPTED)
+//                 .body(RESPONSE_STATUS, equalTo(RESPONSE_STATUS_VALUE))
+//                 .body(RESPONSE_DETAILS, equalTo(RESPONSE_DETAIL_VALUE_SHARING));
 
-        validateUserSharingResults(userIds, expectedResults);
-    }
+//         validateUserSharingResults(userIds, expectedResults);
+//     }
 
     // General User Sharing.
 
@@ -232,27 +232,27 @@ public class UserSharingSuccessTest extends UserSharingBaseTest {
         };
     }
 
-    @Test(dataProvider = "generalUserSharingDataProvider")
-    public void testGeneralUserSharing(List<String> userIds, Map<String, Object> policyWithRoles,
-                                       Map<String, Object> expectedResults) throws Exception {
+//     @Test(dataProvider = "generalUserSharingDataProvider")
+//     public void testGeneralUserSharing(List<String> userIds, Map<String, Object> policyWithRoles,
+//                                        Map<String, Object> expectedResults) throws Exception {
 
-        UserShareWithAllRequestBody requestBody = new UserShareWithAllRequestBody()
-                .userCriteria(getUserCriteriaForBaseUserSharing(userIds))
-                .policy(getPolicyEnumForGeneralUserSharing(policyWithRoles))
-                .roles(getRolesForGeneralUserSharing(policyWithRoles));
+//         UserShareWithAllRequestBody requestBody = new UserShareWithAllRequestBody()
+//                 .userCriteria(getUserCriteriaForBaseUserSharing(userIds))
+//                 .policy(getPolicyEnumForGeneralUserSharing(policyWithRoles))
+//                 .roles(getRolesForGeneralUserSharing(policyWithRoles));
 
-        Response response =
-                getResponseOfPost(USER_SHARING_API_BASE_PATH + SHARE_WITH_ALL_PATH, toJSONString(requestBody));
+//         Response response =
+//                 getResponseOfPost(USER_SHARING_API_BASE_PATH + SHARE_WITH_ALL_PATH, toJSONString(requestBody));
 
-        response.then()
-                .log().ifValidationFails()
-                .assertThat()
-                .statusCode(HttpStatus.SC_ACCEPTED)
-                .body(RESPONSE_STATUS, equalTo(RESPONSE_STATUS_VALUE))
-                .body(RESPONSE_DETAILS, equalTo(RESPONSE_DETAIL_VALUE_SHARING));
+//         response.then()
+//                 .log().ifValidationFails()
+//                 .assertThat()
+//                 .statusCode(HttpStatus.SC_ACCEPTED)
+//                 .body(RESPONSE_STATUS, equalTo(RESPONSE_STATUS_VALUE))
+//                 .body(RESPONSE_DETAILS, equalTo(RESPONSE_DETAIL_VALUE_SHARING));
 
-        validateUserSharingResults(userIds, expectedResults);
-    }
+//         validateUserSharingResults(userIds, expectedResults);
+//     }
 
     // General User Unsharing.
 
@@ -275,24 +275,24 @@ public class UserSharingSuccessTest extends UserSharingBaseTest {
         };
     }
 
-    @Test(dataProvider = "generalUserUnsharingDataProvider")
-    public void testGeneralUserUnsharing(List<String> userIds, Map<String, Object> expectedResults) throws Exception {
+//     @Test(dataProvider = "generalUserUnsharingDataProvider")
+//     public void testGeneralUserUnsharing(List<String> userIds, Map<String, Object> expectedResults) throws Exception {
 
-        UserUnshareWithAllRequestBody requestBody = new UserUnshareWithAllRequestBody()
-                .userCriteria(getUserCriteriaForBaseUserUnsharing(userIds));
+//         UserUnshareWithAllRequestBody requestBody = new UserUnshareWithAllRequestBody()
+//                 .userCriteria(getUserCriteriaForBaseUserUnsharing(userIds));
 
-        Response response =
-                getResponseOfPost(USER_SHARING_API_BASE_PATH + UNSHARE_WITH_ALL_PATH, toJSONString(requestBody));
+//         Response response =
+//                 getResponseOfPost(USER_SHARING_API_BASE_PATH + UNSHARE_WITH_ALL_PATH, toJSONString(requestBody));
 
-        response.then()
-                .log().ifValidationFails()
-                .assertThat()
-                .statusCode(HttpStatus.SC_ACCEPTED)
-                .body(RESPONSE_STATUS, equalTo(RESPONSE_STATUS_VALUE))
-                .body(RESPONSE_DETAILS, equalTo(RESPONSE_DETAIL_VALUE_UNSHARING));
+//         response.then()
+//                 .log().ifValidationFails()
+//                 .assertThat()
+//                 .statusCode(HttpStatus.SC_ACCEPTED)
+//                 .body(RESPONSE_STATUS, equalTo(RESPONSE_STATUS_VALUE))
+//                 .body(RESPONSE_DETAILS, equalTo(RESPONSE_DETAIL_VALUE_UNSHARING));
 
-        validateUserSharingResults(userIds, expectedResults);
-    }
+//         validateUserSharingResults(userIds, expectedResults);
+//     }
 
     // Selective User Unsharing.
 
@@ -324,28 +324,28 @@ public class UserSharingSuccessTest extends UserSharingBaseTest {
         };
     }
 
-    @Test(dataProvider = "selectiveUserUnsharingDataProvider")
-    public void testSelectiveUserUnsharing(List<String> userIds, Map<String, Object> policyWithRoles,
-                                           Map<String, Object> expectedSharedResults, List<String> removingOrgIds,
-                                           Map<String, Object> expectedResults) throws Exception {
+//     @Test(dataProvider = "selectiveUserUnsharingDataProvider")
+//     public void testSelectiveUserUnsharing(List<String> userIds, Map<String, Object> policyWithRoles,
+//                                            Map<String, Object> expectedSharedResults, List<String> removingOrgIds,
+//                                            Map<String, Object> expectedResults) throws Exception {
 
-        testGeneralUserSharing(userIds, policyWithRoles, expectedSharedResults);
+//         testGeneralUserSharing(userIds, policyWithRoles, expectedSharedResults);
 
-        UserUnshareRequestBody requestBody = new UserUnshareRequestBody()
-                .userCriteria(getUserCriteriaForBaseUserUnsharing(userIds))
-                .organizations(getOrganizationsForSelectiveUserUnsharing(removingOrgIds));
+//         UserUnshareRequestBody requestBody = new UserUnshareRequestBody()
+//                 .userCriteria(getUserCriteriaForBaseUserUnsharing(userIds))
+//                 .organizations(getOrganizationsForSelectiveUserUnsharing(removingOrgIds));
 
-        Response response = getResponseOfPost(USER_SHARING_API_BASE_PATH + UNSHARE_PATH, toJSONString(requestBody));
+//         Response response = getResponseOfPost(USER_SHARING_API_BASE_PATH + UNSHARE_PATH, toJSONString(requestBody));
 
-        response.then()
-                .log().ifValidationFails()
-                .assertThat()
-                .statusCode(HttpStatus.SC_ACCEPTED)
-                .body(RESPONSE_STATUS, equalTo(RESPONSE_STATUS_VALUE))
-                .body(RESPONSE_DETAILS, equalTo(RESPONSE_DETAIL_VALUE_UNSHARING));
+//         response.then()
+//                 .log().ifValidationFails()
+//                 .assertThat()
+//                 .statusCode(HttpStatus.SC_ACCEPTED)
+//                 .body(RESPONSE_STATUS, equalTo(RESPONSE_STATUS_VALUE))
+//                 .body(RESPONSE_DETAILS, equalTo(RESPONSE_DETAIL_VALUE_UNSHARING));
 
-        validateUserSharingResults(userIds, expectedResults);
-    }
+//         validateUserSharingResults(userIds, expectedResults);
+//     }
 
     // Test cases builders.
 

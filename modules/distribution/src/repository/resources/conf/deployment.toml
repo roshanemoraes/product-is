@@ -80,3 +80,6 @@ app_password= "dashboard"
 #password= "xxxx"
 #hostname= "smtp.gmail.com"
 #port= 587
+
+[identity_mgt.async_operation_status_management]
+enable_data_persistence = true
