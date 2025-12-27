@@ -25,12 +25,15 @@ import org.awaitility.Awaitility;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Factory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.automation.engine.context.TestUserMode;
+import org.wso2.identity.integration.test.rest.api.server.async.operation.status.mgt.v1.model.Operation;
+import org.wso2.identity.integration.test.rest.api.server.async.operation.status.mgt.v1.model.Operations;
 import org.wso2.identity.integration.test.rest.api.server.user.sharing.management.v1.model.UserShareRequestBodyUserCriteria;
 import org.wso2.identity.integration.test.rest.api.server.user.sharing.management.v1.model.UserShareWithAllRequestBody;
 import org.wso2.identity.integration.test.rest.api.user.common.model.Email;
@@ -41,7 +44,8 @@ import org.wso2.identity.integration.test.restclients.OrgMgtRestClient;
 import org.wso2.identity.integration.test.restclients.SCIM2RestClient;
 import org.wso2.identity.integration.test.restclients.UserSharingRestClient;
 
-import static org.wso2.identity.integration.test.rest.api.server.user.sharing.management.v1.constant.UserSharingConstants.AUTHORIZED_APIS_JSON;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -54,16 +58,11 @@ import java.util.concurrent.TimeUnit;
  */
 public class AsyncOperationStatusMgtPositiveTest extends AsyncOperationStatusMgtBaseTest {
 
-    // private static final String ROOT_TENANT_DOMAIN = "carbon.super";
-    // private static final String ROOT_ORG_ID = "";
-    // private static final String APPLICATION_NAME = "Async Test App";
-    // private static final String ORGANIZATION_NAME = "Async Test Org";
-    // public static final String AUTHORIZED_APIS_JSON = "user-sharing-apis.json";
-
-    // private OrgMgtRestClient orgMgtRestClient;
-    // private String createdOrgId;
-    // private String createdAppId;
     private UserSharingRestClient userSharingRestClient;
+    private static final int DEFAULT_LIMIT = 10;
+    private static final String DEFAULT_FILTER = "";
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
+        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     @Factory(dataProvider = "restAPIUserConfigProvider")
     public AsyncOperationStatusMgtPositiveTest(TestUserMode userMode) throws Exception {
@@ -88,7 +87,6 @@ public class AsyncOperationStatusMgtPositiveTest extends AsyncOperationStatusMgt
     public void init() throws Exception {
 
         super.testInit(API_VERSION, swaggerDefinition, tenant);
-        // setupDetailMaps();
         setupRestClients();
     }
 
@@ -102,36 +100,39 @@ public class AsyncOperationStatusMgtPositiveTest extends AsyncOperationStatusMgt
     }
 
     @Test
-    public void testCreateAppAndOrgAndVerifyAsyncStatus() throws Exception {
+    public void testShareUserWithAllOrganizationsAndVerifyAsyncStatus() throws Exception {
 
-        // ApplicationPostRequest appRequest = new ApplicationPostRequest().name(APPLICATION_NAME);
-        // Response appResponse = applicationClient.createApplication(appRequest);
-        // appResponse.then().statusCode(HttpStatus.SC_CREATED);
-        // createdAppId = appResponse.getHeader(HttpHeaders.LOCATION);
-
-        // RegisterOrganizationRequestDTO orgRequest = new RegisterOrganizationRequestDTO().name(ORGANIZATION_NAME);
-        // OrganizationResponseModel orgResponse = orgMgtRestClient.addOrganization(orgRequest);
-        // createdOrgId = orgResponse.getId();
-
-        // Operation latestOperation = asyncStatusClient.getLatestOperation();
-        // UnitOperations unitOperations = asyncStatusClient.getUnitOperations(latestOperation.getCorrelationId());
-
-        // org.testng.Assert.assertEquals(latestOperation.getStatus(), StatusEnum.SUCCESS);
-        // org.testng.Assert.assertTrue(unitOperations.getUnitOperations().stream()
-        //         .anyMatch(unit -> createdOrgId.equals(unit.getTargetOrgId())));
-        Set<String> initialOperationIds = getAsyncOperationIds();
         String createdSubOrgId = null;
         String sharedUserId = null;
         try {
             createdSubOrgId = createChildOrganizationForSharing();
             sharedUserId = createUserForSharing();
+
             shareUserWithAllOrganizations(sharedUserId);
-            waitForNewAsyncOperationRecord(initialOperationIds);
-            Set<String> updatedOperationIds = getAsyncOperationIds();
-            Set<String> newOperationIds = new HashSet<>(updatedOperationIds);
-            newOperationIds.removeAll(initialOperationIds);
-            org.testng.Assert.assertFalse(newOperationIds.isEmpty(),
-                    "Async operations table was not updated after sharing the user.");
+            
+            Response response = getAsyncOperations();
+            
+            response.then()
+                    .log().ifValidationFails()
+                    .assertThat()
+                    .statusCode(HttpStatus.SC_OK);
+
+            String responseBody = response.getBody().asString();
+            Operations operations = OBJECT_MAPPER.readValue(responseBody, Operations.class);
+            
+            Assert.assertNotNull(operations);
+            Assert.assertNotNull(operations.getOperations());
+            Assert.assertTrue(operations.getOperations().size() >= 1, "No async operations returned");
+
+            Operation op = operations.getOperations().stream()
+                    .filter(o -> "B2B_USER_SHARE".equals(o.getOperationType()))
+                    .filter(o -> "USER".equals(o.getSubjectType()))
+                    .filter(o -> sharedUserId.equals(o.getSubjectId()))
+                    .findFirst()
+                    .orElse(null);
+
+            Assert.assertNotNull(op, "Expected B2B_USER_SHARE operation for shared user not found");
+
         } finally {
             if (sharedUserId != null) {
                 scim2RestClient.deleteUser(sharedUserId);
@@ -141,6 +142,8 @@ public class AsyncOperationStatusMgtPositiveTest extends AsyncOperationStatusMgt
             }
         }
     }
+
+    // Helper methods
 
     private String createChildOrganizationForSharing() throws Exception {
 
@@ -152,7 +155,7 @@ public class AsyncOperationStatusMgtPositiveTest extends AsyncOperationStatusMgt
     private String createUserForSharing() throws Exception {
 
         String uniqueIdentifier = UUID.randomUUID().toString().replace("-", "");
-           String userName = "asyncSharedUser" + unique45679Identifier.substring(0, 8);
+           String userName = "asyncSharedUser" + uniqueIdentifier.substring(0, 8);
         UserObject userObject = new UserObject()
                 .userName(userName)
                 .password("Password@123")
@@ -172,21 +175,94 @@ public class AsyncOperationStatusMgtPositiveTest extends AsyncOperationStatusMgt
     }
 
     private Set<String> getAsyncOperationIds() {
+        return getAsyncOperationIds(DEFAULT_LIMIT, DEFAULT_FILTER);
+    }
 
-        Response response = getResponseOfGet(ASYNC_OPERATIONS_ENDPOINT_URI + "?limit=25");
-        response.then().log().ifValidationFails().statusCode(HttpStatus.SC_OK);
+    private Set<String> getAsyncOperationIds(int limit) {
+        return getAsyncOperationIds(limit, DEFAULT_FILTER);
+    }
+
+    private Response getAsyncOperations() {
+        return getAsyncOperations(DEFAULT_LIMIT, DEFAULT_FILTER);
+    }
+
+    private Response getAsyncOperations(int limit, String filter) {
+
+        StringBuilder uri = new StringBuilder(ASYNC_OPERATIONS_ENDPOINT_URI)
+                .append("?limit=").append(limit);
+
+        if (filter != null && !filter.isEmpty()) {
+            uri.append("&filter=").append(filter);
+        }
+
+        return getResponseOfGet(uri.toString());
+    }
+    // private Operations getAsyncOperations(int limit, String filter) {
+
+    //     StringBuilder uri = new StringBuilder(ASYNC_OPERATIONS_ENDPOINT_URI)
+    //             .append("?limit=").append(limit);
+
+    //     if (filter != null && !filter.isEmpty()) {
+    //         uri.append("&filter=").append(filter);
+    //     }
+
+    //     Response response = getResponseOfGet(uri.toString());
+
+    //     int statusCode = response.getStatusCode();
+    //     String responseBody = response.getBody().asString();
+
+    //     System.out.println("Async Operations API Response Status: " + statusCode);
+    //     System.out.println("Async Operations API Response Body: " + responseBody);
+
+    //     response.then()
+    //             .log().ifValidationFails()
+    //             .statusCode(HttpStatus.SC_OK);
+
+    //     try {
+    //         return OBJECT_MAPPER.readValue(responseBody, Operations.class);
+    //     } catch (Exception e) {
+    //         throw new RuntimeException("Failed to deserialize async operations response.", e);
+    //     }
+    // }
+
+    private Set<String> getAsyncOperationIds(int limit, String filter) {
+
+        StringBuilder uri = new StringBuilder(ASYNC_OPERATIONS_ENDPOINT_URI)
+            .append("?limit=").append(limit);
+
+        if (filter != null && !filter.isEmpty()) {
+            uri.append("&filter=").append(filter);
+        }
+        
+        Response response = getResponseOfGet(uri.toString());
+
+        int statusCode = response.getStatusCode();
+        String responseBody = response.getBody().asString();
+
+        System.out.println("Async Operations API Response Status: " + statusCode);
+        System.out.println("Async Operations API Response Body: " + responseBody);
+
+        response.then()
+                .log().ifValidationFails()
+                .statusCode(HttpStatus.SC_OK);
         Set<String> operationIds = new HashSet<>();
         try {
-            JSONObject responseJson = new JSONObject(response.getBody().asString());
+            JSONObject responseJson = new JSONObject(responseBody);
             JSONArray operations = responseJson.optJSONArray("operations");
             if (operations != null) {
+                System.out.println("Found " + operations.length() + " operations in response");
                 for (int i = 0; i < operations.length(); i++) {
                     JSONObject operation = operations.getJSONObject(i);
-                    operationIds.add(operation.optString("operationId"));
+                    String operationId = operation.optString("operationId");
+                    operationIds.add(operationId);
+                    System.out.println("  Operation " + i + ": " + operationId);
                 }
+            } else {
+                System.out.println("No 'operations' array found in response");
             }
             return operationIds;
         } catch (JSONException e) {
+            System.err.println("Failed to parse JSON response: " + e.getMessage());
             throw new RuntimeException("Failed to parse async operations response.", e);
         }
     }
@@ -206,6 +282,7 @@ public class AsyncOperationStatusMgtPositiveTest extends AsyncOperationStatusMgt
     }
 
     // Setup methods.
+
     private void setupRestClients() throws Exception {
 
         oAuth2RestClient = new OAuth2RestClient(serverURL, tenantInfo);
